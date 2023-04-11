@@ -1,0 +1,305 @@
+automation 2 
+-------------------------------------------------------------------------------------
+
+
+library(dplyr)
+
+
+allmerge_updated <- allmerge %>% filter(srl_no %in% c(1,2,3,4))
+allmerge_updated$total_quantity <- as.numeric(allmerge_updated$total_quantity)
+summary(allmerge_updated$total_quantity)
+
+allmerge_updated$total_quantity[is.na(allmerge_updated$total_quantity)] <- 0
+
+
+uni_hhid <- unique(allmerge_updated$hhid)
+weightarray <- vector(mode = "list", length = 1)
+
+#weightarray = data.frame(matrix(nrow = length(uni_hhid), ncol = 2)) 
+#colnames(weightarray) = c("hhid","weight")
+
+colnum <- c(21:26,29:31,36:43,seq(from = 50, to = 118, by = 4), seq(from = 51, to = 119, by = 4),127,128)
+cols.num <- colnames(allmerge_updated)[colnum]
+allmerge_updated[cols.num] <- sapply(allmerge_updated[cols.num],as.numeric)
+allmerge_updated <- as.data.frame(allmerge_updated)
+
+
+wttbl = data.frame(matrix(nrow = 1, ncol = 2)) 
+colnames(wttbl) = c("hhid_srl_crop","weight")
+
+for (i in 1:length(uni_hhid)){
+  run_data <- allmerge_updated %>% filter(hhid == uni_hhid[i])
+  n = length(run_data$srl_no)
+  a = run_data$total_quantity
+  a_sum = sum(a)
+  for (k in 1:length(a)){
+    a[k] <- a[k]/sum(a_sum)
+  }
+  print(i)
+  run_list <- list(uni_hhid[i],a)
+  weightarray <- append(weightarray, run_list)
+  hhid_srl_crop <- run_data$hhid_srl_crop
+  weight <- a
+  wttbl <- rbind(wttbl, data.frame(hhid_srl_crop, weight))
+}
+
+allmerge_1 <- merge(allmerge_updated,wttbl,by="hhid_srl_crop")
+colnum <- c(seq(from = 54, to = 118, by = 4), seq(from = 55, to = 119, by = 4))
+allmerge_1[,colnum] <- allmerge_1[,colnum]*allmerge_1[,140]
+
+# allmerge_1['merge_total'] <- as.numeric(allmerge_1$merge7) + as.numeric(allmerge_1$merge8) + as.numeric(allmerge_1$merge18) + as.numeric(allmerge_1$merge16)
+allmerge_1['merge_total'] <- as.numeric(allmerge_1$merge7) + as.numeric(allmerge_1$merge8) 
+allmerge_1 <- allmerge_1 %>% filter(merge_total == 6)
+
+
+abc = "E:/Group Project/Only only data/Model/allmerge_v1_new.xlsx"
+write_xlsx(allmerge_1,abc)
+
+
+
+automation 1 
+----------------------------------------------------------------------------------------------------
+
+
+
+library(haven)
+library(dplyr)
+
+level8_77th_visit_2 <- read_dta("E:/Group Project/Only only data/Model/level8 _77th_visit_2.dta")
+View(level8_77th_visit_2)
+
+level8_77th_visit_2 <- as.data.frame(level8_77th_visit_2)
+
+sel_col_id <- c(7:8,12,18:24,26:29)
+
+level8_77th_visit_2 <- level8_77th_visit_2[,sel_col_id]
+
+var_type = c("inputsfrom_where_procured",       
+             "inputsqualityadequacy_code",      
+             "inputspaid_out_expenses",         
+             "inputsimputed_expenses")
+
+input_type = c("seed",
+               "chem_fert","bio_fert","manures",
+               "plant_prot_chem","plant_prot_bio",
+               "diesel","electricity","irrigation",
+               "labour_human","labour_animal",
+               "machinery_equip_repair","loan_int","machinery_equip_rent",
+               "insurance","land_lease_rent","others","total")
+
+var_name <- rep('a',72)
+k = 1
+
+for (i in 1:length(input_type)){
+  for (j in 1:length(var_type)){
+    var_name[k]=paste(input_type[i],var_type[j],sep = "_")
+    k = k + 1
+  }
+}
+
+tech_name <- var_name
+
+var_name_1 = c("hhid","serial_no_of_cropas_in_col_1_of_", "crop_code_as_in_col_2_block_6",
+               "hhid_srl_crop",
+               "nssregion", "district", "fod_subregion")
+var_name_2 = c("nsc", "multiplier")
+
+
+var_name <- append(var_name_1,var_name)
+var_name <- append(var_name,var_name_2)
+
+uni_hhid <- unique(level8_77th_visit_2$hhid)
+
+level8_ungroup_1 = data.frame(matrix(nrow = 56613, ncol = length(var_name))) 
+colnames(level8_ungroup_1) = var_name
+View(level8_ungroup_1)
+
+
+
+k = 0
+for (i in 1:length(uni_hhid)){
+  run_data <- level8_77th_visit_2 %>% filter(hhid == uni_hhid[i])
+  n = length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_)))
+  level8_ungroup_1$hhid[(k+1):(k+n)] = uni_hhid[i]
+  level8_ungroup_1$serial_no_of_cropas_in_col_1_of_[(k+1):(k+n)] = run_data$serial_no_of_cropas_in_col_1_of_[1:n]
+  level8_ungroup_1$crop_code_as_in_col_2_block_6[(k+1):(k+n)] = run_data$crop_code_as_in_col_2_block_6[1:n]
+  level8_ungroup_1$nssregion[(k+1):(k+n)] = run_data$nssregion[1]
+  level8_ungroup_1$district[(k+1):(k+n)] = run_data$district[1]
+  level8_ungroup_1$fod_subregion[(k+1):(k+n)] = run_data$fod_subregion[1]
+  level8_ungroup_1$nsc[(k+1):(k+n)] = run_data$nsc[1]
+  level8_ungroup_1$multiplier[(k+1):(k+n)] = run_data$multiplier[1]
+  
+  for (i in 1:length(na.omit(as.numeric(run_data$serial_no)))){
+    vars <- rep('a',4)
+    vars[1] = run_data[i,7]
+    vars[2] = run_data[i,8]
+    vars[3] = run_data[i,9]
+    vars[4] = run_data[i,10]
+    
+    if(run_data$serial_no[i] == "01") {
+      level8_ungroup_1[(k+1),8:11] = vars
+      
+    } else if(run_data$serial_no[i] == "02") {
+      level8_ungroup_1[(k+2),8:11] = vars
+      
+    } else if(run_data$serial_no[i] == "03") {
+      level8_ungroup_1[(k+3),8:11] = vars
+      
+    } else if(run_data$serial_no[i] == "04") {
+      level8_ungroup_1[(k+4),8:11] = vars
+      
+    } else if(run_data$serial_no[i] == "05") {
+      level8_ungroup_1[(k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_)))),8:11] = vars
+      
+    } else if(run_data$serial_no[i] == "06") {
+      for (i in 12:15){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-11]
+      }
+      
+    } else if(run_data$serial_no[i] == "07") {
+      for (i in 16:19){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-15]
+      }
+      
+    } else if(run_data$serial_no[i] == "08") {
+      for (i in 20:23){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-19]
+      }
+      
+    } else if(run_data$serial_no[i] == "09") {
+      for (i in 24:27){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-23]
+      }
+      
+    } else if(run_data$serial_no[i] == "10") {
+      for (i in 28:31){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-27]
+      }
+      
+    } else if(run_data$serial_no[i] == "11") {
+      for (i in 32:35){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-31]
+      }
+      
+    } else if(run_data$serial_no[i] == "12") {
+      for (i in 36:39){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-35]
+      }
+      
+    } else if(run_data$serial_no[i] == "13") {
+      for (i in 40:43){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-39]
+      }
+      
+    } else if(run_data$serial_no[i] == "14") {
+      for (i in 44:47){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-43]
+      }
+      
+    } else if(run_data$serial_no[i] == "15") {
+      for (i in 48:51){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-47]
+      }
+      
+    } else if(run_data$serial_no[i] == "16") {
+      for (i in 52:55){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-51]
+      }
+      
+    } else if(run_data$serial_no[i] == "17") {
+      for (i in 56:59){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-55]
+      }
+      
+    } else if(run_data$serial_no[i] == "18") {
+      for (i in 60:63){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-59]
+      }
+      
+    } else if(run_data$serial_no[i] == "19") {
+      for (i in 64:67){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-63]
+      }
+      
+    } else if(run_data$serial_no[i] == "20") {
+      for (i in 68:71){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-67]
+      }
+      
+    } else if(run_data$serial_no[i] == "21") {
+      for (i in 72:75){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-71]
+      }
+      
+    } else if(run_data$serial_no[i] == "22") {
+      for (i in 76:79){
+        level8_ungroup_1[(k+1):((k+length(na.omit(as.numeric(run_data$serial_no_of_cropas_in_col_1_of_))))),i] = vars[i-75]
+      }
+      
+    } 
+    
+  }
+  
+  
+  
+  k = k + n
+}
+
+abc = "E:/Group Project/Only only data/Model/level8 _ungroup_1.csv"
+write.csv2(level8_ungroup_1,abc,row.names = FALSE)
+
+
+
+
+
+automation new 
+--------------------------------------------------------------------------------------------------
+
+allmerge_updated <- allmerge_v1 %>% filter(b5a_q1 %in% c(1,2,3,4))
+allmerge_updated$total_quantity <- as.numeric(allmerge_updated$total_quantity)
+summary(allmerge_updated$total_quantity)
+
+allmerge_updated$total_quantity[is.na(allmerge_updated$total_quantity)] <- 0
+
+
+uni_hhid <- unique(allmerge_updated$HHID)
+weightarray <- vector(mode = "list", length = 1)
+
+#weightarray = data.frame(matrix(nrow = length(uni_hhid), ncol = 2)) 
+#colnames(weightarray) = c("hhid","weight")
+
+colnum <- c(seq(from = 58, to = 114, by = 4),138)
+cols.num <- colnames(allmerge_updated)[colnum]
+allmerge_updated[cols.num] <- sapply(allmerge_updated[cols.num],as.numeric)
+allmerge_updated <- as.data.frame(allmerge_updated)
+
+
+wttbl = data.frame(matrix(nrow = 1, ncol = 2)) 
+colnames(wttbl) = c("hhid_srl_crop","weight")
+
+for (i in 1:length(uni_hhid)){
+  run_data <- allmerge_updated %>% filter(HHID == uni_hhid[i])
+  n = length(run_data$b5a_q1)
+  a = run_data$total_quantity
+  a_sum = sum(a)
+  for (k in 1:length(a)){
+    a[k] <- a[k]/sum(a_sum)
+  }
+  print(i)
+  run_list <- list(uni_hhid[i],a)
+  weightarray <- append(weightarray, run_list)
+  hhid_srl_crop <- run_data$hhid_srl_crop
+  weight <- a
+  wttbl <- rbind(wttbl, data.frame(hhid_srl_crop, weight))
+}
+
+allmerge_1 <- merge(allmerge_updated,wttbl,by="hhid_srl_crop")
+colnum <- c(seq(from = 62, to = 114, by = 4))
+allmerge_1[,colnum] <- allmerge_1[,colnum]*allmerge_1[,139]
+
+allmerge_1['merge_total'] <-  as.numeric(allmerge_1$merge6) + as.numeric(allmerge_1$merge13) + as.numeric(allmerge_1$merge15)
+allmerge_1 <- allmerge_1 %>% filter(merge_total == 9)
+
+
+abc = "E:/Group Project/Only only data/Model2/allmerge_v2.xlsx"
+write_xlsx(allmerge_1,abc)
